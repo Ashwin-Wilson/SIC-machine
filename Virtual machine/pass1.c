@@ -2,17 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-void main(){
+void main(int argc, char *argv[]){
 
 	int locctr, straddr = 0x00, prglen = 0x00;
 	char label[10], opcode[10], operand[10], mnemonic[10], code[10];
-	FILE *fp1 = fopen("input.txt", "r");
+	FILE *fp1 = fopen(argv[1], "r");
 	FILE *fp2 = fopen("optab.txt", "r");
 	FILE *fp3 = fopen("intermediate.txt", "w");
 	FILE *fp4 = fopen("symtab.txt", "w");
 	FILE *fp5 = fopen("length.txt", "w");
-
+	
 	fscanf(fp1, "%s%s%s", label, opcode, operand);	
+
+	if(!fp1){
+		printf("Error in opening %s!", argv[1]);
+	}
 
 	if(strcmp(opcode , "START") == 0){
 		straddr = strtol(operand, NULL, 16);
@@ -47,7 +51,6 @@ void main(){
 		if(strcmp(opcode, "WORD") == 0){
 
 			locctr += 3;
-			prglen += 3;
 		
 		}else if(strcmp(opcode, "RESW") == 0){
 		
@@ -60,7 +63,6 @@ void main(){
 		}else if(strcmp(opcode, "BYTE") == 0){
 
 			locctr += (strlen(operand)-3);
-			prglen += (strlen(operand)-3);
 			
 		}
 		

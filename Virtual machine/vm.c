@@ -13,8 +13,6 @@ int A, X, L, PC, SW;
 //To store a record readed from source file
 char record[100];
 
-
-
 void strslice( char *dest, char *src, int idx){
 	int i, j;
 	for( i=idx, j=0; src[i]!='\0' && src[i] != '^'; i++, j++ ){
@@ -23,12 +21,12 @@ void strslice( char *dest, char *src, int idx){
 	dest[j] = '\0';
 }
 
-//To print the content of memory
+//To print the content of memory, used for debugging
 void printMem(){
 	char  temp[10];
 	strslice(temp, record, 2); // use for getting limit if need for the below loop
-	for(int i = 0x2000; i < 0x2017; i++){
-		printf("%X\t: %X\n" ,i, memory[i]);
+	for(int i = 0x2000; i < 0x2020; i++){
+		printf("%X\t: %02X\n" ,i, memory[i]);
 	}
 }
 
@@ -41,67 +39,101 @@ int fetch(int address, int len){
 		value = value * 0x100;
 		value += memory[j];
 	}
-	//printf("Temp :  %04X\naddress :  %x\n", value, address);
 
 	return value;
 }
 
 //For executing the loaded prgm
 void execute(){
-
-	//address = 0x200E;
 	
 	char temp[10];
-	int tlen, opcode, opaddr;
+	int prglen, opcode, opaddr;
+	unsigned int var = 0;
 	FILE *fp = fopen("length.txt", "r");
 	
 	fscanf(fp, "%s", temp);
-	tlen = strtol(temp, NULL, 16);
+	prglen = strtol(temp, NULL, 16);
 	
-	for(int i=0x00; i<0x0C/*tlen*/; i+=0x03){
+	for(int i=0x00; i<prglen; i+=0x03){
 		opcode = fetch(PC, 1);
-		printf("Opcode :  %X\n", opcode);
 		PC++;
 		switch(opcode){
 			case 0x00: //LDA
 				opaddr = fetch(PC, 2);
 				PC += 2;
 				A = fetch(opaddr, 3);
-				printf("A : %X\n", A);
 				break;
 				
 			case 0xC: //STA
-				opaddr = fetch(PC, 2);
+				opaddr = fetch(PC, 2);	
 				PC += 2;
-				printf("%X\n", opaddr);
 				opaddr += 2;
-				for(int i=0; i < 2; i++){
+				for(int i=0; i < 3; i++){
 					memory[opaddr--] = A % 0x10;
 					A /= 0x10;
 				}
+				
+				printf("\n");
 				break;
 				
 			case 0x50: //LDCH
 				opaddr = fetch(PC, 2);
 				PC += 2;
 				A = fetch(opaddr, 1);
-				printf("A : %X\n", A);
 				break;
 				
 			case 0x54: //STCH
 				opaddr = fetch(PC, 2);
 				PC += 2;
-				printf("%X\n", opaddr);
 				memory[opaddr] = A;
 				break;
 				
+			case 0x18: //ADD
+				opaddr = fetch(PC, 2);
+				PC += 2;
+				for(int i=0; i < 3; i++){
+					var *= 0x100;
+					var += memory[opaddr++];
+				}
+				A += var;
+				break;
+			
+			case 0x1C: //SUB
+				opaddr = fetch(PC, 2);
+				PC += 2;
+				for(int i=0; i < 3; i++){
+					var *= 0x100;
+					var += memory[opaddr++];
+				}
+				A -= var;
+				break;
+				
+			case 0x20: //MUL
+				opaddr = fetch(PC, 2);
+				PC += 2;
+				for(int i=0; i < 3; i++){
+					var *= 0x100;
+					var += memory[opaddr++];
+				}
+				A *= var;
+				break;
+				
+			case 0x24: //DIV
+				opaddr = fetch(PC, 2);
+				PC += 2;
+				for(int i=0; i < 3; i++){
+					var *= 0x100;
+					var += memory[opaddr++];
+				}
+				A /= var;
+				break;
 		}
+		var = 0x00;
 	}
 	
-	printMem();
+	//printMem();
 	fclose(fp);
 }
-
 
 
 //Absolute Loader
@@ -124,7 +156,6 @@ void loader(FILE *objcode){
 				sprintf(temp, "%c%c", record[i], record[i+1]);
 				j = strtol(temp, NULL, 16);
 				memory[address] = j;
-				//printf("%X\t:%X \t %c\t%c\n",address, memory[address], record[i], record[i+1]);
 				address++;
 				i += 2;
 			}else{
@@ -136,14 +167,32 @@ void loader(FILE *objcode){
 	
 	//printMem();
 	strslice(temp, record, 2);
-	PC = strtol(temp, NULL, 16);
-	execute(); //passing the address of first executable instruction in End rec
+	PC = strtol(temp, NULL, 16);//Loading the address of first executable instruction in End rec
+}
+
+void memRead(){
+	unsigned int loc;
+	printf("Enter the Memory location:  ");
+	scanf("%X", &loc);
+	for(int i=0;i <3; i++){
+		printf("%X : %02X\n", loc, memory[loc]);
+		loc++;
+	}
+}
+
+void memWrite(){
+	unsigned int loc, value;
+	printf("Enter the Memory location and Value:  ");
+	scanf("%X %X", &loc, &value);
+	memory[loc] = value;
 }
 
 
 void main(){
-	memory[2018] = '1';
+
 	char straddr[10];
+	int choice;
+	
 	FILE *objcode = fopen("objcode.sic", "r");
 	
 	if(!objcode){
@@ -154,9 +203,35 @@ void main(){
 	fscanf(objcode, "%s", record);
 	
 	loader(objcode);
+
 	
+		printf("\nMAIN MENU: \n1 for memory read \n2 for memory write \n3 TO execute \n4 to exit virtual machine!\n\n");
 	
+	do{
+		printf("\nEnter you choice : ");
+		scanf("%d", &choice);
+		
+		switch(choice){
+			case 1:
+				memRead();
+				break;
+			case 2:
+				memWrite();
+				break;
+			case 3:
+				execute();
+				break;
+			case 4: 
+				exit(0);
+				break;
+			default:
+				printf("Invalid choice!");
+				printf("\nMAIN MENU: \n1 for memory read \n2 for memory write \n3 TO execute \n4 to exit virtual machine!\n\n");
+				break;
+		}
+	}while(choice != 4);
 	
 	fclose(objcode);
-
 }
+
+
