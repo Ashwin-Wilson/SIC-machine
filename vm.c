@@ -206,11 +206,11 @@ void main(){
 
 	
 		printf("\nMAIN MENU: \n1 for memory read \n2 for memory write \n3 TO execute \n4 to exit virtual machine!\n\n");
-	
+		char not;
 	do{
 		printf("\nEnter you choice : ");
 		scanf("%d", &choice);
-		
+		scanf("%c", &not);//to catch invalid char entry!
 		switch(choice){
 			case 1:
 				memRead();
